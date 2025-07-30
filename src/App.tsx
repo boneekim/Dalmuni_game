@@ -44,6 +44,11 @@ function App() {
 const Container = styled.div`
   text-align: center;
   padding: 2rem;
+  min-height: 100vh; /* 최소 높이를 뷰포트 높이로 설정 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* 내용을 중앙에 배치 */
 `;
 
 export default App;
