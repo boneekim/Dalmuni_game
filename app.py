@@ -45,7 +45,7 @@ if 'selected_card_indices' not in st.session_state:
     st.session_state.selected_card_indices = []
 
 # --- 카드 이미지 생성 함수 ---
-def create_card_image_html(card, is_selected=False, is_back=False):
+def create_card_image_html(card, is_back=False):
     if is_back:
         # 카드 뒷면 이미지 (파란색)
         svg_content = f"""
@@ -73,14 +73,7 @@ def create_card_image_html(card, is_selected=False, is_back=False):
         </svg>
         """
     
-    border_style = "2px solid #61dafb" if is_selected else "1px solid #ccc"
-    transform_style = "translateY(-10px)" if is_selected else "none"
-
-    return f"""
-    <div style="border: {border_style}; border-radius: 10px; transform: {transform_style}; transition: transform 0.2s, border 0.2s; display: inline-block;">
-        {svg_content}
-    </div>
-    """
+    return svg_content
 
 # --- 게임 로직 함수 ---
 def initialize_game(player_count, difficulty):
@@ -337,9 +330,47 @@ st.markdown(
         font-size: 0.8em;
         z-index: 1000;
     }
+
+    /* Streamlit 체크박스 커스텀 스타일 */
+    .stCheckbox > label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        width: 100px; /* 카드 너비 */
+        height: 140px; /* 카드 높이 */
+        border: 1px solid #555;
+        border-radius: 10px;
+        box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+    }
+    .stCheckbox > label:hover {
+        transform: translateY(-5px);
+        box-shadow: 5px 5px 12px rgba(0,0,0,0.7);
+    }
+    .stCheckbox > label > div:first-child { /* 체크박스 아이콘 숨기기 */
+        display: none;
+    }
+    .stCheckbox > label > div:last-child { /* 라벨 텍스트 (SVG) */
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .stCheckbox input[type="checkbox"]:checked + div > div:last-child > div > svg {
+        border: 3px solid #61dafb; /* 선택된 카드 테두리 */
+        transform: translateY(-15px); /* 선택 시 더 많이 올라오도록 */
+        box-shadow: 5px 5px 15px rgba(97, 218, 251, 0.8); /* 선택 시 그림자 강조 */
+    }
     </style>
-    """,
-    unsafe_allow_html=True
+    """
+    , unsafe_allow_html=True
 )
 
 if st.session_state.game_state == "setup":
@@ -363,7 +394,7 @@ elif st.session_state.game_state == "playing":
         st.rerun() # AI 턴 처리 후 재실행
 
     # 상단 플레이어 정보
-    other_players_container = st.container()
+    other_players_container = st.container() # st.container()로 감싸서 독립적인 공간 확보
     with other_players_container:
         cols = st.columns(len(st.session_state.players))
         for i, player in enumerate(st.session_state.players):
@@ -403,26 +434,20 @@ elif st.session_state.game_state == "playing":
         with hand_container:
             st.markdown("<div class='card-container'>", unsafe_allow_html=True)
             for i, card in enumerate(human_player["hand"]):
-                is_selected = i in st.session_state.selected_card_indices
-                card_class = "card-item selected" if is_selected else "card-item"
-                
-                # Streamlit 버튼과 HTML/CSS를 조합하여 클릭 가능한 카드 이미지 구현
-                # 버튼을 카드 이미지 위에 겹쳐서 클릭 영역으로 사용
-                # Streamlit의 버튼은 클릭 시 페이지를 재실행하므로, 버튼을 누르면 선택 상태가 토글되고 페이지가 새로고침됨
-                st.markdown(f"""
-                <div class="{card_class}" style="position: relative;">
-                    {create_card_image_html(card, is_selected=is_selected)}
-                    <button style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" 
-                            onclick="window.parent.document.querySelector('[data-testid="stButton"] button[key="card_{id(card)}"]').click();">
-                    </button>
-                </div>
-                """, unsafe_allow_html=True)
-                # 실제 Streamlit 버튼은 숨겨서 사용
-                if st.button(f"card_{id(card)}", key=f"card_{id(card)}", help=card["name"], use_container_width=True):
-                    if is_selected:
-                        st.session_state.selected_card_indices.remove(i)
-                    else:
-                        st.session_state.selected_card_indices.append(i)
+                # Streamlit 체크박스로 카드 선택 구현
+                # 체크박스의 라벨에 카드 이미지를 넣고, 체크박스 자체는 CSS로 숨김
+                checked = st.checkbox(
+                    create_card_image_html(card), 
+                    value=i in st.session_state.selected_card_indices, 
+                    key=f"card_checkbox_{id(card)}", 
+                    help=card["name"], 
+                    label_visibility="hidden"
+                )
+                if checked and i not in st.session_state.selected_card_indices:
+                    st.session_state.selected_card_indices.append(i)
+                    st.rerun()
+                elif not checked and i in st.session_state.selected_card_indices:
+                    st.session_state.selected_card_indices.remove(i)
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
