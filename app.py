@@ -196,7 +196,7 @@ if st.session_state.game_state == "setup":
 
     if st.button("게임 시작"):
         initialize_game(player_count, difficulty)
-        st.experimental_rerun()
+        st.rerun()
 
 elif st.session_state.game_state == "playing":
     st.header("게임 진행 중")
@@ -209,7 +209,7 @@ elif st.session_state.game_state == "playing":
         # AI 턴은 자동으로 진행되도록 함
         ai_play_turn()
         st.session_state.ai_turn_active = False
-        st.experimental_rerun()
+        st.rerun()
 
     st.write(f"현재 턴: {st.session_state.players[st.session_state.current_player_index]["name"]}")
     if st.session_state.is_revolution:
@@ -238,11 +238,11 @@ elif st.session_state.game_state == "playing":
         with col1:
             if st.button("내기", disabled=not selected_cards):
                 play_turn(selected_card_indices)
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             if st.button("패스"):
                 pass_turn()
-                st.experimental_rerun()
+                st.rerun()
 
     st.subheader("다른 플레이어")
     for player in st.session_state.players:
@@ -258,7 +258,7 @@ elif st.session_state.game_state == "finished":
 
     if st.button("새 게임 시작"):
         st.session_state.clear()
-        st.experimental_rerun()
+        st.rerun()
 
 # --- 저작권 문구 ---
 st.markdown(
