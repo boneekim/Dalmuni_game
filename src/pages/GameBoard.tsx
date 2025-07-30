@@ -1,6 +1,8 @@
+
 import { useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import type { Game, CardData } from '../types';
+import type { Game } from '../types';
+import type { CardData } from '../constants/cards'; // CardData를 types 대신 constants에서 임포트
 import Card from '../components/Card';
 
 interface GameBoardProps {

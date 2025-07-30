@@ -98,7 +98,7 @@ const useGameLogic = (settings: GameSettings | null, setGameState: (state: GameS
     return true;
   }, [game]);
 
-  const findAllPossiblePlays = useCallback((hand: CardData[], lastPlayed: CardData[] | null, allPassed: boolean): CardData[][] => {
+  const findAllPossiblePlays = useCallback((hand: CardData[]): CardData[][] => {
     const possiblePlays: CardData[][] = [];
     const jokerCard = hand.find(card => card.rank === 13); // 조커 카드
     const nonJokerHand = hand.filter(card => card.rank !== 13);
@@ -213,7 +213,7 @@ const useGameLogic = (settings: GameSettings | null, setGameState: (state: GameS
     if (!game || !game.players[game.currentPlayerIndex].isAI) return;
 
     const currentPlayer = game.players[game.currentPlayerIndex];
-    const possiblePlays = findAllPossiblePlays(currentPlayer.hand, game.lastPlayed, game.passedPlayers.size === game.players.length - 1);
+    const possiblePlays = findAllPossiblePlays(currentPlayer.hand);
 
     if (possiblePlays.length > 0) {
       let play: CardData[];
