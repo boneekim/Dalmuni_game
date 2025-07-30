@@ -33,6 +33,7 @@ function App() {
       <GlobalStyle />
       <Container>
         <h1>달무티 게임</h1>
+        <p>테스트 중입니다... 이 텍스트가 보이면 리액트 앱이 정상적으로 로드된 것입니다.</p>
         {gameState === 'setup' && <GameSetup onGameStart={handleGameStart} />}
         {gameState === 'playing' && game && <GameBoard game={game} playTurn={playTurn} passTurn={passTurn} />}
         {gameState === 'finished' && game && <Finale players={game.players} onRestart={handleRestart} />}
@@ -49,6 +50,8 @@ const Container = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center; /* 내용을 중앙에 배치 */
+  background-color: #444; /* 배경색 추가 */
+  color: white;
 `;
 
 export default App;
