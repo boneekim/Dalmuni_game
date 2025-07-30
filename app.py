@@ -1,7 +1,7 @@
 import streamlit as st
 import random
-import time # time 모듈 추가
-from itertools import combinations # combinations는 AI 로직 개선 후 제거 예정
+import time
+import base64
 
 st.set_page_config(layout="wide")
 
@@ -45,9 +45,8 @@ if 'selected_card_indices' not in st.session_state:
     st.session_state.selected_card_indices = []
 
 # --- 카드 이미지 생성 함수 ---
-def create_card_image_html(card, is_back=False):
+def get_card_svg_content(card, is_back=False):
     if is_back:
-        # 카드 뒷면 이미지 (파란색)
         svg_content = f"""
         <svg width="100" height="140" viewBox="0 0 100 140" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="140" rx="10" fill="#4169E1"/>
@@ -55,7 +54,6 @@ def create_card_image_html(card, is_back=False):
         </svg>
         """
     else:
-        # 카드 앞면 이미지 (랭크에 따라 색상 변경)
         colors = {
             1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32", 4: "#ADD8E6",
             5: "#90EE90", 6: "#FFB6C1", 7: "#DDA0DD", 8: "#FFDAB9",
@@ -74,6 +72,12 @@ def create_card_image_html(card, is_back=False):
         """
     
     return svg_content
+
+def get_card_image_base64(card, is_back=False):
+    svg_content = get_card_svg_content(card, is_back)
+    svg_bytes = svg_content.encode("utf-8")
+    base64_svg = base64.b64encode(svg_bytes).decode("utf-8")
+    return f"data:image/svg+xml;base64,{base64_svg}"
 
 # --- 게임 로직 함수 ---
 def initialize_game(player_count, difficulty):
@@ -268,19 +272,22 @@ st.markdown(
         justify-content: center;
         margin-top: 20px;
     }
-    /* 카드 자체 스타일 */
-    .card-item {
+    /* 카드 아이템 (st.image를 감싸는 div) */
+    .card-item-wrapper {
         border: 1px solid #555;
         border-radius: 10px;
         box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
         cursor: pointer;
+        width: 100px; /* 카드 너비 */
+        height: 140px; /* 카드 높이 */
+        overflow: hidden; /* 이미지 넘침 방지 */
     }
-    .card-item:hover {
+    .card-item-wrapper:hover {
         transform: translateY(-5px);
         box-shadow: 5px 5px 12px rgba(0,0,0,0.7);
     }
-    .card-item.selected {
+    .card-item-wrapper.selected {
         border: 3px solid #61dafb; /* 선택된 카드 테두리 */
         transform: translateY(-15px); /* 선택 시 더 많이 올라오도록 */
         box-shadow: 5px 5px 15px rgba(97, 218, 251, 0.8); /* 선택 시 그림자 강조 */
@@ -332,24 +339,16 @@ st.markdown(
     }
 
     /* Streamlit 체크박스 커스텀 스타일 */
+    /* 체크박스 자체는 숨기고, 라벨(카드 이미지)만 보이도록 */
     .stCheckbox > label {
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 0;
-        margin: 0;
-        cursor: pointer;
-        width: 100px; /* 카드 너비 */
-        height: 140px; /* 카드 높이 */
-        border: 1px solid #555;
-        border-radius: 10px;
-        box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
-    }
-    .stCheckbox > label:hover {
-        transform: translateY(-5px);
-        box-shadow: 5px 5px 12px rgba(0,0,0,0.7);
     }
     .stCheckbox > label > div:first-child { /* 체크박스 아이콘 숨기기 */
         display: none;
@@ -362,11 +361,6 @@ st.markdown(
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-    .stCheckbox input[type="checkbox"]:checked + div > div:last-child > div > svg {
-        border: 3px solid #61dafb; /* 선택된 카드 테두리 */
-        transform: translateY(-15px); /* 선택 시 더 많이 올라오도록 */
-        box-shadow: 5px 5px 15px rgba(97, 218, 251, 0.8); /* 선택 시 그림자 강조 */
     }
     </style>
     """
@@ -404,7 +398,7 @@ elif st.session_state.game_state == "playing":
                 st.markdown(f"<div class='{player_class}'>", unsafe_allow_html=True)
                 st.write(f"**{player['name']}**")
                 if player["id"] != next((p for p in st.session_state.players if not p["is_ai"]), None)["id"]:
-                    st.markdown(create_card_image_html(None, is_back=True), unsafe_allow_html=True)
+                    st.image(get_card_image_base64(None, is_back=True), width=50) # 카드 뒷면 이미지
                     st.write(f"{len(player['hand'])}장")
                 else:
                     st.write(f"{len(player['hand'])}장 (내 카드)")
@@ -419,7 +413,7 @@ elif st.session_state.game_state == "playing":
         st.markdown("<div class='played-cards-container'>", unsafe_allow_html=True)
         if st.session_state.last_played:
             for card in st.session_state.last_played:
-                st.markdown(create_card_image_html(card), unsafe_allow_html=True)
+                st.image(get_card_image_base64(card), width=100) # st.image 사용
         else:
             st.write("아직 낸 카드가 없습니다.")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -432,24 +426,34 @@ elif st.session_state.game_state == "playing":
     if human_player:
         hand_container = st.container()
         with hand_container:
-            st.markdown("<div class='card-container'>", unsafe_allow_html=True)
+            # 카드 선택 UI 개선: st.image와 st.checkbox 조합
+            cols = st.columns(len(human_player["hand"]))
             for i, card in enumerate(human_player["hand"]):
-                # Streamlit 체크박스로 카드 선택 구현
-                # 체크박스의 라벨에 카드 이미지를 넣고, 체크박스 자체는 CSS로 숨김
-                checked = st.checkbox(
-                    create_card_image_html(card), 
-                    value=i in st.session_state.selected_card_indices, 
-                    key=f"card_checkbox_{id(card)}", 
-                    help=card["name"], 
-                    label_visibility="hidden"
-                )
-                if checked and i not in st.session_state.selected_card_indices:
-                    st.session_state.selected_card_indices.append(i)
-                    st.rerun()
-                elif not checked and i in st.session_state.selected_card_indices:
-                    st.session_state.selected_card_indices.remove(i)
-                    st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+                with cols[i]:
+                    is_selected = i in st.session_state.selected_card_indices
+                    card_wrapper_class = "card-item-wrapper selected" if is_selected else "card-item-wrapper"
+                    
+                    # 카드 이미지와 체크박스를 감싸는 div
+                    st.markdown(f"<div class='{card_wrapper_class}'>", unsafe_allow_html=True)
+                    st.image(get_card_image_base64(card), width=100, use_column_width=True) # 카드 이미지
+                    
+                    # 체크박스 (실제 선택 로직)
+                    checked = st.checkbox(
+                        "", # 라벨 없음
+                        value=is_selected,
+                        key=f"card_select_{id(card)}",
+                        label_visibility="hidden"
+                    )
+                    
+                    # 체크박스 상태에 따라 선택된 카드 인덱스 업데이트
+                    if checked and i not in st.session_state.selected_card_indices:
+                        st.session_state.selected_card_indices.append(i)
+                        st.rerun()
+                    elif not checked and i in st.session_state.selected_card_indices:
+                        st.session_state.selected_card_indices.remove(i)
+                        st.rerun()
+                    
+                    st.markdown("</div>", unsafe_allow_html=True) # 래퍼 div 닫기
 
         # 액션 버튼
         action_cols = st.columns(2)
