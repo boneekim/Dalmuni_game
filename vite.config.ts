@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // 상대 경로로 설정
+  base: '/', // 절대 경로로 설정
 })
