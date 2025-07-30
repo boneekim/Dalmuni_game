@@ -39,6 +39,46 @@ if 'finished_players' not in st.session_state:
     st.session_state.finished_players = []
 if 'is_revolution' not in st.session_state:
     st.session_state.is_revolution = False
+if 'selected_card_indices' not in st.session_state:
+    st.session_state.selected_card_indices = []
+
+# --- 카드 이미지 생성 함수 ---
+def create_card_image_html(card, is_selected=False, is_back=False):
+    if is_back:
+        # 카드 뒷면 이미지 (파란색)
+        svg_content = f"""
+        <svg width="100" height="140" viewBox="0 0 100 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="140" rx="10" fill="#4169E1"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="40" fill="white">DAL</text>
+        </svg>
+        """
+    else:
+        # 카드 앞면 이미지 (랭크에 따라 색상 변경)
+        colors = {
+            1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32", 4: "#ADD8E6",
+            5: "#90EE90", 6: "#FFB6C1", 7: "#DDA0DD", 8: "#FFDAB9",
+            9: "#B0E0E6", 10: "#F0E68C", 11: "#F0E68C", 12: "#F0E68C",
+            13: "#FF4500" # 조커
+        }
+        fill_color = colors.get(card["rank"], "#CCCCCC")
+        text_color = "black" if card["rank"] != 13 else "white"
+        display_text = "J" if card["rank"] == 13 else str(card["rank"])
+
+        svg_content = f"""
+        <svg width="100" height="140" viewBox="0 0 100 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="140" rx="10" fill="{fill_color}"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="60" fill="{text_color}">{display_text}</text>
+        </svg>
+        """
+    
+    border_style = "2px solid #61dafb" if is_selected else "1px solid #ccc"
+    transform_style = "translateY(-10px)" if is_selected else "none"
+
+    return f"""
+    <div style="border: {border_style}; border-radius: 10px; transform: {transform_style}; transition: transform 0.2s, border 0.2s; display: inline-block;">
+        {svg_content}
+    </div>
+    """
 
 # --- 게임 로직 함수 ---
 def initialize_game(player_count, difficulty):
@@ -92,6 +132,7 @@ def initialize_game(player_count, difficulty):
     st.session_state.last_player_who_played = None
     st.session_state.finished_players = []
     st.session_state.is_revolution = False
+    st.session_state.selected_card_indices = []
 
 def validate_play(selected_cards):
     if not selected_cards: return False
@@ -205,10 +246,8 @@ elif st.session_state.game_state == "playing":
     current_player = st.session_state.players[st.session_state.current_player_index]
     if current_player["is_ai"]:
         st.write(f"{current_player["name"]}의 턴입니다...")
-        st.session_state.ai_turn_active = True
         # AI 턴은 자동으로 진행되도록 함
         ai_play_turn()
-        st.session_state.ai_turn_active = False
         st.rerun()
 
     st.write(f"현재 턴: {st.session_state.players[st.session_state.current_player_index]["name"]}")
@@ -220,34 +259,49 @@ elif st.session_state.game_state == "playing":
         cols = st.columns(len(st.session_state.last_played))
         for i, card in enumerate(st.session_state.last_played):
             with cols[i]:
-                st.image(f"https://via.placeholder.com/100x140?text={card["rank"]}", caption=card["name"], width=100)
+                st.markdown(create_card_image_html(card), unsafe_allow_html=True)
     else:
         st.write("아직 낸 카드가 없습니다.")
 
     st.subheader("내 손패")
     human_player = next((p for p in st.session_state.players if not p["is_ai"]), None)
     if human_player:
-        selected_cards = st.multiselect(
-            "낼 카드를 선택하세요:",
-            options=[f"{card["name"]} ({card["rank"]})" for card in human_player["hand"]],
-            format_func=lambda x: x.split(" (")[0] # 이름만 표시
-        )
-        selected_card_indices = [human_player["hand"].index(next(c for c in human_player["hand"] if f"{c["name"]} ({c["rank"]})" == sc)) for sc in selected_cards]
+        # 카드 선택 UI 개선
+        hand_cols = st.columns(len(human_player["hand"]))
+        for i, card in enumerate(human_player["hand"]):
+            with hand_cols[i]:
+                is_selected = i in st.session_state.selected_card_indices
+                card_html = create_card_image_html(card, is_selected=is_selected)
+                if st.button(f"card_{i}", help=card["name"], use_container_width=True):
+                    if is_selected:
+                        st.session_state.selected_card_indices.remove(i)
+                    else:
+                        st.session_state.selected_card_indices.append(i)
+                    st.rerun()
+                st.markdown(card_html, unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("내기", disabled=not selected_cards):
-                play_turn(selected_card_indices)
+            if st.button("내기", disabled=not st.session_state.selected_card_indices):
+                play_turn(st.session_state.selected_card_indices)
+                st.session_state.selected_card_indices = [] # 선택 초기화
                 st.rerun()
         with col2:
             if st.button("패스"):
                 pass_turn()
+                st.session_state.selected_card_indices = [] # 선택 초기화
                 st.rerun()
 
     st.subheader("다른 플레이어")
+    other_players_cols = st.columns(len(st.session_state.players) - 1)
+    other_player_idx = 0
     for player in st.session_state.players:
         if player["id"] != human_player["id"]:
-            st.write(f"{player["name"]}: {len(player["hand"])}장")
+            with other_players_cols[other_player_idx]:
+                st.write(f"{player["name"]}")
+                st.markdown(create_card_image_html(None, is_back=True), unsafe_allow_html=True) # 카드 뒷면
+                st.write(f"{len(player["hand"])}장")
+            other_player_idx += 1
 
 elif st.session_state.game_state == "finished":
     st.header("게임 종료!")
