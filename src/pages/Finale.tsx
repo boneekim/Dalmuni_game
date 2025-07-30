@@ -1,6 +1,5 @@
-
 import styled from 'styled-components';
-import { Player } from '../types';
+import type { Player } from '../types';
 
 interface FinaleProps {
   players: Player[];

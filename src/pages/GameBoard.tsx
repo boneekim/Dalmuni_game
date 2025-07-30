@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
-import styled, { css } from 'styled-components';
-import { Game } from '../types';
+import styled, { css, keyframes } from 'styled-components';
+import type { Game, CardData } from '../types';
 import Card from '../components/Card';
 
 interface GameBoardProps {
@@ -12,6 +11,8 @@ interface GameBoardProps {
 
 const GameBoard = ({ game, playTurn, passTurn }: GameBoardProps) => {
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
+  const [animatingCards, setAnimatingCards] = useState<CardData[]>([]);
+
   const humanPlayer = game.players.find(p => !p.isAI);
   const isMyTurn = game.players[game.currentPlayerIndex].id === humanPlayer?.id;
 
@@ -26,8 +27,14 @@ const GameBoard = ({ game, playTurn, passTurn }: GameBoardProps) => {
 
   const handlePlayClick = () => {
     if (selectedCardIndices.length > 0) {
-      playTurn(selectedCardIndices);
-      setSelectedCardIndices([]);
+      const cardsToAnimate = selectedCardIndices.map(i => humanPlayer!.hand[i]);
+      setAnimatingCards(cardsToAnimate);
+
+      setTimeout(() => {
+        playTurn(selectedCardIndices);
+        setSelectedCardIndices([]);
+        setAnimatingCards([]);
+      }, 500); // 0.5초 애니메이션
     }
   };
 
@@ -55,6 +62,13 @@ const GameBoard = ({ game, playTurn, passTurn }: GameBoardProps) => {
         ) : (
           <div>{game.passedPlayers.size > 0 ? '모두 패스했습니다.' : '카드를 내세요'}</div>
         )}
+        {animatingCards.length > 0 && (
+          <AnimatingCardContainer>
+            {animatingCards.map((card, index) => (
+              <Card key={index} card={card} />
+            ))}
+          </AnimatingCardContainer>
+        )}
       </PlayArea>
 
       <HumanPlayerContainer>
@@ -66,6 +80,7 @@ const GameBoard = ({ game, playTurn, passTurn }: GameBoardProps) => {
               onClick={() => handleCardClick(index)}
               isSelected={selectedCardIndices.includes(index)}
               isMyTurn={isMyTurn}
+              isAnimating={animatingCards.includes(card)}
             >
               <Card card={card} />
             </CardWrapper>
@@ -80,8 +95,6 @@ const GameBoard = ({ game, playTurn, passTurn }: GameBoardProps) => {
   );
 };
 
-// ... (styled components는 이전과 동일하게 유지) ...
-
 const BoardContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -95,13 +108,19 @@ const OpponentsContainer = styled.div`
   margin-bottom: 1rem;
 `;
 
+const blinkAnimation = keyframes`
+  0% { box-shadow: 0 0 10px #61dafb; }
+  50% { box-shadow: 0 0 20px #61dafb, 0 0 30px #61dafb; }
+  100% { box-shadow: 0 0 10px #61dafb; }
+`;
+
 const PlayerInfo = styled.div<{ isCurrent: boolean }>`
   border: 1px solid #fff;
   padding: 0.5rem 1rem;
   border-radius: 5px;
   ${({ isCurrent }) => isCurrent && css`
     border-color: #61dafb;
-    box-shadow: 0 0 10px #61dafb;
+    animation: ${blinkAnimation} 1.5s infinite ease-in-out;
   `}
 `;
 
@@ -114,6 +133,7 @@ const PlayArea = styled.div`
   justify-content: center;
   margin-bottom: 1rem;
   min-height: 180px;
+  position: relative;
 `;
 
 const CardGrid = styled.div`
@@ -131,13 +151,18 @@ const HandContainer = styled.div`
   margin-top: 1rem;
 `;
 
-const CardWrapper = styled.div<{ isSelected: boolean; isMyTurn: boolean }>`
+const CardWrapper = styled.div<{ isSelected: boolean; isMyTurn: boolean; isAnimating: boolean }>`
   cursor: ${({ isMyTurn }) => (isMyTurn ? 'pointer' : 'default')};
   transition: transform 0.2s, box-shadow 0.2s;
 
   ${({ isSelected }) => isSelected && css`
     transform: translateY(-10px);
     box-shadow: 0 0 15px #61dafb;
+  `}
+
+  ${({ isAnimating }) => isAnimating && css`
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
   `}
 `;
 
@@ -165,6 +190,30 @@ const ActionButtons = styled.div`
       background-color: #ccc;
       cursor: not-allowed;
     }
+  }
+`;
+
+const animateToCenter = keyframes`
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(0, -150px) scale(1.2); /* 중앙으로 이동 및 확대 */
+    opacity: 0;
+  }
+`;
+
+const AnimatingCardContainer = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+
+  & > div {
+    animation: ${animateToCenter} 0.5s forwards;
   }
 `;
 

@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import styled from 'styled-components';
-import { GameSettings } from '../App';
+import type { GameSettings } from '../App';
 
 interface GameSetupProps {
   onGameStart: (settings: GameSettings) => void;

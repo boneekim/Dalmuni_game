@@ -1,6 +1,6 @@
 
 import styled from 'styled-components';
-import { CardData } from '../constants/cards';
+import type { CardData } from '../constants/cards';
 
 interface CardProps {
   card: CardData;
@@ -9,9 +9,7 @@ interface CardProps {
 const Card = ({ card }: CardProps) => {
   return (
     <CardWrapper>
-      <CardImagePlaceholder>
-        <span>{card.rank}</span>
-      </CardImagePlaceholder>
+      <CardImage src={card.image} alt={card.name} />
       <CardName>{card.name}</CardName>
     </CardWrapper>
   );
@@ -32,16 +30,11 @@ const CardWrapper = styled.div`
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 `;
 
-const CardImagePlaceholder = styled.div`
+const CardImage = styled.img`
   width: 80px;
   height: 80px;
-  background-color: #ddd;
+  object-fit: contain;
   border-radius: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  font-weight: bold;
 `;
 
 const CardName = styled.div`
