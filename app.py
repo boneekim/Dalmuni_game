@@ -6,7 +6,7 @@ st.set_page_config(layout="wide")
 st.title("달무티 게임")
 
 # --- 카드 정의 ---
-cARDS = [
+CARDS = [
     {"id": 1, "rank": 1, "name": "달무티", "quantity": 1},
     {"id": 2, "rank": 2, "name": "대주교", "quantity": 2},
     {"id": 3, "rank": 3, "name": "총리", "quantity": 3},
@@ -189,8 +189,10 @@ def ai_play_turn():
 # --- UI 렌더링 --- 
 if st.session_state.game_state == "setup":
     st.header("게임 설정")
-    player_count = st.slider("플레이어 수 (AI 포함)", 4, 8, 4)
-    difficulty = st.radio("AI 난이도", ("하", "중", "상"))
+    # 플레이어 수 기본값 변경: 2명부터, 디폴트 3명
+    player_count = st.slider("플레이어 수 (AI 포함)", 2, 8, 3)
+    # AI 난이도 기본값 변경: "중"으로 디폴트
+    difficulty = st.radio("AI 난이도", ("하", "중", "상"), index=1)
 
     if st.button("게임 시작"):
         initialize_game(player_count, difficulty)
@@ -257,3 +259,26 @@ elif st.session_state.game_state == "finished":
     if st.button("새 게임 시작"):
         st.session_state.clear()
         st.experimental_rerun()
+
+# --- 저작권 문구 ---
+st.markdown(
+    """
+    <style>
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #282c34; /* 배경색과 맞춤 */
+        color: white;
+        text-align: right;
+        padding: 10px;
+        font-size: 0.8em;
+    }
+    </style>
+    <div class="footer">
+        © 2025 BnK. All rights reserved.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
