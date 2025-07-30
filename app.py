@@ -1,5 +1,7 @@
 import streamlit as st
 import random
+import time # time 모듈 추가
+from itertools import combinations # combinations는 AI 로직 개선 후 제거 예정
 
 st.set_page_config(layout="wide")
 
@@ -246,9 +248,9 @@ elif st.session_state.game_state == "playing":
     current_player = st.session_state.players[st.session_state.current_player_index]
     if current_player["is_ai"]:
         st.write(f"{current_player["name"]}의 턴입니다...")
-        # AI 턴은 자동으로 진행되도록 함
+        time.sleep(1) # AI 턴 딜레이
         ai_play_turn()
-        st.rerun()
+        # st.rerun() # AI 턴 처리 후 중복 호출 제거
 
     st.write(f"현재 턴: {st.session_state.players[st.session_state.current_player_index]["name"]}")
     if st.session_state.is_revolution:
