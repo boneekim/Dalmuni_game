@@ -272,7 +272,9 @@ elif st.session_state.game_state == "playing":
             with hand_cols[i]:
                 is_selected = i in st.session_state.selected_card_indices
                 card_html = create_card_image_html(card, is_selected=is_selected)
-                if st.button(f"card_{i}", help=card["name"], use_container_width=True):
+                # 버튼을 카드 이미지 위에 겹쳐서 클릭 영역으로 사용
+                # Streamlit의 버튼은 클릭 시 페이지를 재실행하므로, 버튼을 누르면 선택 상태가 토글되고 페이지가 새로고침됨
+                if st.button(f"card_{id(card)}", help=card["name"], use_container_width=True):
                     if is_selected:
                         st.session_state.selected_card_indices.remove(i)
                     else:
