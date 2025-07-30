@@ -1,0 +1,49 @@
+
+import { useState } from 'react';
+import styled from 'styled-components';
+import { GlobalStyle } from './styles/GlobalStyle';
+import GameSetup from './pages/GameSetup';
+import GameBoard from './pages/GameBoard';
+import Finale from './pages/Finale';
+import useGameLogic from './hooks/useGameLogic';
+
+export type GameState = 'setup' | 'playing' | 'finished';
+export interface GameSettings {
+  playerCount: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+function App() {
+  const [gameState, setGameState] = useState<GameState>('setup');
+  const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+  const { game, playTurn, passTurn } = useGameLogic(gameSettings, setGameState);
+
+  const handleGameStart = (settings: GameSettings) => {
+    setGameSettings(settings);
+    setGameState('playing');
+  };
+
+  const handleRestart = () => {
+    setGameSettings(null);
+    setGameState('setup');
+  };
+
+  return (
+    <>
+      <GlobalStyle />
+      <Container>
+        <h1>달무티 게임</h1>
+        {gameState === 'setup' && <GameSetup onGameStart={handleGameStart} />}
+        {gameState === 'playing' && game && <GameBoard game={game} playTurn={playTurn} passTurn={passTurn} />}
+        {gameState === 'finished' && game && <Finale players={game.players} onRestart={handleRestart} />}
+      </Container>
+    </>
+  );
+}
+
+const Container = styled.div`
+  text-align: center;
+  padding: 2rem;
+`;
+
+export default App;
