@@ -230,14 +230,124 @@ def ai_play_turn():
         pass_turn()
 
 # --- UI 렌더링 --- 
+# 전역 CSS 스타일
+st.markdown(
+    """
+    <style>
+    /* 전체 배경색 및 폰트 */
+    body {
+        background-color: #1a1a1a; /* 어두운 배경 */
+        color: #f0f0f0; /* 밝은 텍스트 */
+        font-family: 'Arial', sans-serif;
+    }
+    /* Streamlit 기본 위젯 스타일 오버라이드 */
+    .stApp {
+        background-color: #1a1a1a;
+    }
+    .stButton>button {
+        background-color: #4CAF50; /* 녹색 버튼 */
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #45a049;
+    }
+    .stButton>button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    .stSlider .stSliderHandle {
+        background-color: #4CAF50;
+    }
+    .stRadio > label > div {
+        color: #f0f0f0;
+    }
+    /* 카드 컨테이너 스타일 */
+    .card-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    /* 카드 자체 스타일 */
+    .card-item {
+        border: 1px solid #555;
+        border-radius: 10px;
+        box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+    .card-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 5px 5px 12px rgba(0,0,0,0.7);
+    }
+    .card-item.selected {
+        border: 3px solid #61dafb; /* 선택된 카드 테두리 */
+        transform: translateY(-15px); /* 선택 시 더 많이 올라오도록 */
+        box-shadow: 5px 5px 15px rgba(97, 218, 251, 0.8); /* 선택 시 그림자 강조 */
+    }
+    /* 중앙 낸 카드 스타일 */
+    .played-cards-container {
+        min-height: 160px;
+        border: 2px dashed #555;
+        border-radius: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        padding: 10px;
+        margin-bottom: 20px;
+        background-color: #2a2a2a;
+    }
+    /* 플레이어 정보 스타일 */
+    .player-info {
+        border: 1px solid #777;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        background-color: #3a3a3a;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+    .player-info.current-turn {
+        border-color: #61dafb;
+        box-shadow: 0 0 15px rgba(97, 218, 251, 0.8);
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 15px rgba(97, 218, 251, 0.8); }
+        50% { box-shadow: 0 0 25px rgba(97, 218, 251, 1); }
+        100% { box-shadow: 0 0 15px rgba(97, 218, 251, 0.8); }
+    }
+    /* 저작권 푸터 */
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #1a1a1a;
+        color: #777;
+        text-align: right;
+        padding: 10px;
+        font-size: 0.8em;
+        z-index: 1000;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 if st.session_state.game_state == "setup":
     st.header("게임 설정")
-    # 플레이어 수 기본값 변경: 2명부터, 디폴트 3명
     player_count = st.slider("플레이어 수 (AI 포함)", 2, 8, 3)
-    # AI 난이도 기본값 변경: "중"으로 디폴트
     difficulty = st.radio("AI 난이도", ("하", "중", "상"), index=1)
 
-    if st.button("게임 시작"):
+    if st.button("게임 시작", use_container_width=True):
         initialize_game(player_count, difficulty)
         st.rerun()
 
@@ -247,65 +357,87 @@ elif st.session_state.game_state == "playing":
     # AI 턴 처리
     current_player = st.session_state.players[st.session_state.current_player_index]
     if current_player["is_ai"]:
-        st.write(f"{current_player["name"]}의 턴입니다...")
+        st.info(f"{current_player["name"]}의 턴입니다...")
         time.sleep(1) # AI 턴 딜레이
         ai_play_turn()
-        # st.rerun() # AI 턴 처리 후 중복 호출 제거
+        st.rerun() # AI 턴 처리 후 재실행
 
-    st.write(f"현재 턴: {st.session_state.players[st.session_state.current_player_index]["name"]}")
-    if st.session_state.is_revolution:
-        st.warning("혁명 상태입니다! 높은 숫자가 강한 카드입니다.")
-
-    st.subheader("중앙에 낸 카드")
-    if st.session_state.last_played:
-        cols = st.columns(len(st.session_state.last_played))
-        for i, card in enumerate(st.session_state.last_played):
+    # 상단 플레이어 정보
+    other_players_container = st.container()
+    with other_players_container:
+        cols = st.columns(len(st.session_state.players))
+        for i, player in enumerate(st.session_state.players):
             with cols[i]:
-                st.markdown(create_card_image_html(card), unsafe_allow_html=True)
-    else:
-        st.write("아직 낸 카드가 없습니다.")
+                is_current = (i == st.session_state.current_player_index)
+                player_class = "player-info current-turn" if is_current else "player-info"
+                st.markdown(f"<div class='{player_class}'>", unsafe_allow_html=True)
+                st.write(f"**{player['name']}**")
+                if player["id"] != next((p for p in st.session_state.players if not p["is_ai"]), None)["id"]:
+                    st.markdown(create_card_image_html(None, is_back=True), unsafe_allow_html=True)
+                    st.write(f"{len(player['hand'])}장")
+                else:
+                    st.write(f"{len(player['hand'])}장 (내 카드)")
+                st.markdown("</div>", unsafe_allow_html=True)
 
+    st.markdown("<hr style='border-top: 1px solid #444; margin: 20px 0;'>", unsafe_allow_html=True) # 구분선
+
+    # 중앙에 낸 카드
+    st.subheader("중앙에 낸 카드")
+    played_cards_container = st.container()
+    with played_cards_container:
+        st.markdown("<div class='played-cards-container'>", unsafe_allow_html=True)
+        if st.session_state.last_played:
+            for card in st.session_state.last_played:
+                st.markdown(create_card_image_html(card), unsafe_allow_html=True)
+        else:
+            st.write("아직 낸 카드가 없습니다.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-top: 1px solid #444; margin: 20px 0;'>", unsafe_allow_html=True) # 구분선
+
+    # 내 손패
     st.subheader("내 손패")
     human_player = next((p for p in st.session_state.players if not p["is_ai"]), None)
     if human_player:
-        # 카드 선택 UI 개선
-        hand_cols = st.columns(len(human_player["hand"]))
-        for i, card in enumerate(human_player["hand"]):
-            with hand_cols[i]:
+        hand_container = st.container()
+        with hand_container:
+            st.markdown("<div class='card-container'>", unsafe_allow_html=True)
+            for i, card in enumerate(human_player["hand"]):
                 is_selected = i in st.session_state.selected_card_indices
-                card_html = create_card_image_html(card, is_selected=is_selected)
+                card_class = "card-item selected" if is_selected else "card-item"
+                
+                # Streamlit 버튼과 HTML/CSS를 조합하여 클릭 가능한 카드 이미지 구현
                 # 버튼을 카드 이미지 위에 겹쳐서 클릭 영역으로 사용
                 # Streamlit의 버튼은 클릭 시 페이지를 재실행하므로, 버튼을 누르면 선택 상태가 토글되고 페이지가 새로고침됨
-                if st.button(f"card_{id(card)}", help=card["name"], use_container_width=True):
+                st.markdown(f"""
+                <div class="{card_class}" style="position: relative;">
+                    {create_card_image_html(card, is_selected=is_selected)}
+                    <button style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" 
+                            onclick="window.parent.document.querySelector('[data-testid="stButton"] button[key="card_{id(card)}"]').click();">
+                    </button>
+                </div>
+                """, unsafe_allow_html=True)
+                # 실제 Streamlit 버튼은 숨겨서 사용
+                if st.button(f"card_{id(card)}", key=f"card_{id(card)}", help=card["name"], use_container_width=True):
                     if is_selected:
                         st.session_state.selected_card_indices.remove(i)
                     else:
                         st.session_state.selected_card_indices.append(i)
                     st.rerun()
-                st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("내기", disabled=not st.session_state.selected_card_indices):
+        # 액션 버튼
+        action_cols = st.columns(2)
+        with action_cols[0]:
+            if st.button("내기", disabled=not st.session_state.selected_card_indices or st.session_state.current_player_index != st.session_state.players.index(human_player), use_container_width=True):
                 play_turn(st.session_state.selected_card_indices)
                 st.session_state.selected_card_indices = [] # 선택 초기화
                 st.rerun()
-        with col2:
-            if st.button("패스"):
+        with action_cols[1]:
+            if st.button("패스", disabled=st.session_state.current_player_index != st.session_state.players.index(human_player), use_container_width=True):
                 pass_turn()
                 st.session_state.selected_card_indices = [] # 선택 초기화
                 st.rerun()
-
-    st.subheader("다른 플레이어")
-    other_players_cols = st.columns(len(st.session_state.players) - 1)
-    other_player_idx = 0
-    for player in st.session_state.players:
-        if player["id"] != human_player["id"]:
-            with other_players_cols[other_player_idx]:
-                st.write(f"{player["name"]}")
-                st.markdown(create_card_image_html(None, is_back=True), unsafe_allow_html=True) # 카드 뒷면
-                st.write(f"{len(player["hand"])}장")
-            other_player_idx += 1
 
 elif st.session_state.game_state == "finished":
     st.header("게임 종료!")
@@ -314,26 +446,13 @@ elif st.session_state.game_state == "finished":
     for player in sorted_finished_players:
         st.write(f"{player["rank"]}등: {player["name"]}")
 
-    if st.button("새 게임 시작"):
+    if st.button("새 게임 시작", use_container_width=True):
         st.session_state.clear()
         st.rerun()
 
 # --- 저작권 문구 ---
 st.markdown(
     """
-    <style>
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #282c34; /* 배경색과 맞춤 */
-        color: white;
-        text-align: right;
-        padding: 10px;
-        font-size: 0.8em;
-    }
-    </style>
     <div class="footer">
         © 2025 BnK. All rights reserved.
     </div>
