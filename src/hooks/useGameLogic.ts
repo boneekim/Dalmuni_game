@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Game, Player } from '../types';
 import type { GameSettings, GameState } from '../App';
@@ -172,6 +173,10 @@ const useGameLogic = (settings: GameSettings | null, setGameState: (state: GameS
       finishedPlayers: newFinishedPlayers,
       isRevolution: newIsRevolution,
     }));
+
+    // 사운드 재생
+    const audio = new Audio('/sounds/card_play.mp3');
+    audio.play().catch(e => console.error("Error playing sound:", e));
 
     if (newFinishedPlayers.length === game.players.length - 1) {
       const lastPlayer = game.players.find(p => p.hand.length > 0 && !newFinishedPlayers.some(fp => fp.id === p.id));
